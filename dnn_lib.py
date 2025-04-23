@@ -649,17 +649,17 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
 
         if lambd == 0.:
             cost = compute_cross_entropy_cost(AL, Y)
-        # elif lambd > 0.:
-        #     cost = compute_cross_entropy_cost(AL, Y) + compute_L2_regularization_cost(m, parameters, lambd)
-        # else:
-        #     print("\033[91mError! Please select valid lambd value")
+        elif lambd > 0.:
+            cost = compute_cross_entropy_cost(AL, Y) + compute_L2_regularization_cost(m, parameters, lambd)
+        else:
+            print("\033[91mError! Please select valid lambd value")
 
         if lambd == 0. and keep_prob == 1.:
             grads = L_layer_model_backward(AL, Y, model_cache)
         # elif lambd == 0. and keep_prob < 1. and keep_prob > 0.:
         #     grads = L_layer_model_backward_with_dropout()
-        # elif lambd > 0. and keep_prob == 1.:
-        #     grads = L_layer_model_backward_with_L2_regularization(AL, Y, model_cache, lambd)
+        elif lambd > 0. and keep_prob == 1.:
+            grads = L_layer_model_backward_with_L2_regularization(AL, Y, model_cache, lambd)
         # elif lambd > 0. and keep_prob < 1. and keep_prob > 0.:
         #     grads = L_layer_model_backward_with_L2_regularization_and_droput()
         # else:
