@@ -219,7 +219,7 @@ def activation_step_forward(Z, activation):
     activation_cache = Z
     return A, activation_cache
 
-def single_layer_calculations_forward(A_prev, W, b, activation):
+def single_layer_forward(A_prev, W, b, activation):
     """
     Implement the forward propagation for the LINEAR->ACTIVATION layer
 
@@ -260,12 +260,12 @@ def L_layer_model_forward(X, parameters):
     model_cache = {}
 
     for l in range(1,L): # layer 1 to L-1
-        A, single_layer_cache = single_layer_calculations_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
+        A, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
 
         model_cache["layer" + str(l)] = single_layer_cache
         A_prev = A
 
-    AL, single_layer_cache = single_layer_calculations_forward(A_prev, parameters["W" + str(L)], parameters["b" + str(L)], "sigmoid")
+    AL, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(L)], parameters["b" + str(L)], "sigmoid")
     model_cache["layer" + str(L)] = single_layer_cache
 
     return AL, model_cache
@@ -289,12 +289,12 @@ def L_layer_model_forward_with_dropout(X, parameters, lambd = 0.5):
     model_cache = {}
 
     for l in range(1,L): # layer 1 to L-1
-        A, single_layer_cache = single_layer_calculations_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
+        A, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
 
         model_cache["layer" + str(l)] = single_layer_cache
         A_prev = A
 
-    AL, single_layer_cache = single_layer_calculations_forward(A_prev, parameters["W" + str(L)], parameters["b" + str(L)], "sigmoid")
+    AL, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(L)], parameters["b" + str(L)], "sigmoid")
     model_cache["layer" + str(L)] = single_layer_cache
 
     return AL, model_cache
@@ -587,8 +587,8 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
         model_cache = {}
         grads = {}
 
-        A1, model_cache["layer1"] = single_layer_calculations_forward(X,  parameters["W1"], parameters["b1"], "relu")
-        AL, model_cache["layer2"] = single_layer_calculations_forward(A1, parameters["W2"], parameters["b2"], "sigmoid")
+        A1, model_cache["layer1"] = single_layer_forward(X, parameters["W1"], parameters["b1"], "relu")
+        AL, model_cache["layer2"] = single_layer_forward(A1, parameters["W2"], parameters["b2"], "sigmoid")
 
         cost = compute_cross_entropy_cost(AL, Y)
 
