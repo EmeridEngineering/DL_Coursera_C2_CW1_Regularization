@@ -341,7 +341,7 @@ def compute_L2_regularization_cost(m, parameters, lambd):
 
     return cost_L2_regularization
 
-def linear_step_backward(dZ, A_prev, W, b):
+def linear_step_backward(dZ, A_prev, W, b, lambd=0., keep_prob=1.0):
     """
     Implement the linear portion of backward propagation for a single layer (layer l)
 
@@ -436,7 +436,7 @@ def activation_step_backward(dA, Z, activation):
 
     return dZ
 
-def single_layer_calculations_backward(dA, single_layer_cache, activation):
+def single_layer_calculations_backward(dA, single_layer_cache, activation, lambd=0., keep_prob=1.):
     """
     Implement the backward propagation for the LINEAR->ACTIVATION layer.
 
@@ -457,7 +457,7 @@ def single_layer_calculations_backward(dA, single_layer_cache, activation):
 
     return dA_prev, dW, db
 
-def L_layer_model_backward(AL, Y, model_cache):
+def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=1.):
     """
     Implement the backward propagation for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
 
@@ -482,7 +482,7 @@ def L_layer_model_backward(AL, Y, model_cache):
     grads["dA" + str(L)] = dAL
 
     single_layer_cache = model_cache["layer" + str(L)]
-    dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid")
+    dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid", lambd=lambd, keep_prob=keep_prob)
     grads["dW" + str(L)] = dW
     grads["db" + str(L)] = db
     grads["dA" + str(L-1)] = dA_prev
@@ -490,53 +490,13 @@ def L_layer_model_backward(AL, Y, model_cache):
     # Hidden layers backpropagation
     for l in reversed(range(1,L)): # Loop from L-1 to 1
         single_layer_cache = model_cache["layer" + str(l)]
-        dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(l)], single_layer_cache, activation="relu")
+        dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(l)], single_layer_cache, activation="relu", lambd=lambd, keep_prob=keep_prob)
         grads["dW" + str(l)] = dW
         grads["db" + str(l)] = db
         grads["dA" + str(l - 1)] = dA_prev
 
     return grads
 
-
-def L_layer_model_backward_with_L2_regularization(AL, Y, model_cache, lambd):
-    """
-    Implement the backward propagation for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
-
-    Arguments:
-    AL -- probability vector, output of the forward propagation (L_model_forward())
-    Y -- true "label" vector (containing 0 if non-cat, 1 if cat)
-    model_cache -- list of caches containing:
-                every cache of linear_activation_forward() with "relu" (it's caches[l], for l in range(L-1) i.e l = 0...L-2)
-                the cache of linear_activation_forward() with "sigmoid" (it's caches[L-1])
-
-    Returns:
-    grads -- A dictionary with the gradients
-             grads["dA" + str(l)] = ...
-             grads["dW" + str(l)] = ...
-             grads["db" + str(l)] = ...
-    """
-    grads = {}
-    L = len(model_cache)
-
-    # Last layer backpropagation
-    dAL = - np.divide(Y, AL) + np.divide(1 - Y, 1 - AL)
-    grads["dA" + str(L)] = dAL
-
-    single_layer_cache = model_cache["layer" + str(L)]
-    dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid")
-    grads["dW" + str(L)] = dW
-    grads["db" + str(L)] = db
-    grads["dA" + str(L-1)] = dA_prev
-
-    # Hidden layers backpropagation
-    for l in reversed(range(1,L)): # Loop from L-1 to 1
-        single_layer_cache = model_cache["layer" + str(l)]
-        dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(l)], single_layer_cache, activation="relu")
-        grads["dW" + str(l)] = dW
-        grads["db" + str(l)] = db
-        grads["dA" + str(l - 1)] = dA_prev
-
-    return grads
 
 def update_parameters(params, grads, learning_rate):
     """
@@ -659,7 +619,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         # elif lambd == 0. and keep_prob < 1. and keep_prob > 0.:
         #     grads = L_layer_model_backward_with_dropout()
         elif lambd > 0. and keep_prob == 1.:
-            grads = L_layer_model_backward_with_L2_regularization(AL, Y, model_cache, lambd)
+            grads = L_layer_model_backward(AL, Y, model_cache, lambd, keep_prob)
         # elif lambd > 0. and keep_prob < 1. and keep_prob > 0.:
         #     grads = L_layer_model_backward_with_L2_regularization_and_droput()
         # else:
