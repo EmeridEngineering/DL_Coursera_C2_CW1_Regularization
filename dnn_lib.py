@@ -161,8 +161,7 @@ def linear_step_forward(A_prev, W, b):
 
     assert (Z.shape == (W.shape[0], A_prev.shape[1]))
 
-    linear_cache = (A_prev, W, b)
-    return Z, linear_cache
+    return Z
 
 def sigmoid(Z):
     """
@@ -216,8 +215,7 @@ def activation_step_forward(Z, activation):
     else:
         print("\033[91mError! Please make sure you have passed the value correctly in the \"activation\" parameter")
 
-    activation_cache = Z
-    return A, activation_cache
+    return A
 
 def single_layer_forward(A_prev, W, b, activation):
     """
@@ -234,12 +232,12 @@ def single_layer_forward(A_prev, W, b, activation):
     layer_cache -- a python tuple containing "linear_cache" and "activation_cache" for the given layer;
              stored for computing the backward pass efficiently
     """
-    Z, linear_cache = linear_step_forward(A_prev, W, b)
-    A, activation_cache = activation_step_forward(Z, activation)
+    Z = linear_step_forward(A_prev, W, b)
+    A = activation_step_forward(Z, activation)
 
     assert (A.shape == (W.shape[0], A_prev.shape[1])) # Z.shape
 
-    single_layer_cache = (linear_cache, activation_cache)
+    single_layer_cache = (Z, A, W, b, A_prev)
     return A, single_layer_cache
 
 def L_layer_model_forward(X, parameters):
@@ -343,7 +341,7 @@ def compute_L2_regularization_cost(m, parameters, lambd):
 
     return cost_L2_regularization
 
-def linear_step_backward(dZ, linear_cache):
+def linear_step_backward(dZ, A_prev, W, b):
     """
     Implement the linear portion of backward propagation for a single layer (layer l)
 
@@ -356,7 +354,7 @@ def linear_step_backward(dZ, linear_cache):
     dW -- Gradient of the cost with respect to W (current layer l), same shape as W
     db -- Gradient of the cost with respect to b (current layer l), same shape as b
     """
-    A_prev, W, b = linear_cache
+
     m = dZ.shape[1] # A_prev.shape[1] would be ok as well, as m is common for Z,dZ,A,dA and is common for all layers
 
     dW = 1./m * np.dot(dZ,A_prev.T) # dW.shape = (n_l, n_(l-1)), dZ.shape = (n_l, m), A_prev.shape = (n_(l-1), m)
@@ -370,7 +368,7 @@ def linear_step_backward(dZ, linear_cache):
 
     return dA_prev, dW, db
 
-def sigmoid_backward(dA, activation_cache):
+def sigmoid_backward(dA, Z):
     """
     Implement the backward propagation for a single SIGMOID unit.
 
@@ -381,7 +379,7 @@ def sigmoid_backward(dA, activation_cache):
     Returns:
     dZ -- Gradient of the cost with respect to Z
     """
-    Z = activation_cache
+
     a = sigmoid(Z)
     dZ = dA * a * (1-a) # elementwise multiplication
 
@@ -389,7 +387,7 @@ def sigmoid_backward(dA, activation_cache):
 
     return dZ
 
-def relu_backward(dA, activation_cache):
+def relu_backward(dA, Z):
     """
     Implement the backward propagation for a single RELU unit.
 
@@ -400,7 +398,7 @@ def relu_backward(dA, activation_cache):
     Returns:
     dZ -- Gradient of the cost with respect to Z
     """
-    Z = activation_cache
+
     # dZ = np.multiply(dA,Z > 0) # if Z > 0 then g'(Z) = 1 else if z <= 0 then g'(Z) = 0 | then we multiply elementwise
 
     # Alternate code, same behavior
@@ -411,7 +409,7 @@ def relu_backward(dA, activation_cache):
 
     return dZ
 
-def activation_step_backward(dA, activation_cache, activation):
+def activation_step_backward(dA, Z, activation):
     """
     Implement the backward propagation for a single activation step.
 
@@ -426,10 +424,10 @@ def activation_step_backward(dA, activation_cache, activation):
     dZ = np.zeros(dA.shape)
 
     if activation == "sigmoid":
-        dZ = sigmoid_backward(dA, activation_cache)
+        dZ = sigmoid_backward(dA, Z)
 
     elif activation == "relu":
-        dZ = relu_backward(dA, activation_cache)
+        dZ = relu_backward(dA, Z)
 
     else:
         print("\033[91mError! Please make sure you have passed the value correctly in the \"activation\" parameter")
@@ -452,10 +450,10 @@ def single_layer_calculations_backward(dA, single_layer_cache, activation):
     dW -- Gradient of the cost with respect to W (current layer l), same shape as W
     db -- Gradient of the cost with respect to b (current layer l), same shape as b
     """
-    linear_cache, activation_cache = single_layer_cache
+    Z, A, W, b, A_prev = single_layer_cache
 
-    dZ = activation_step_backward(dA, activation_cache, activation)
-    dA_prev, dW, db = linear_step_backward(dZ, linear_cache)
+    dZ = activation_step_backward(dA, Z, activation)
+    dA_prev, dW, db = linear_step_backward(dZ, A_prev, W, b)
 
     return dA_prev, dW, db
 
