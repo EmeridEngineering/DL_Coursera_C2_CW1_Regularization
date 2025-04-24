@@ -217,7 +217,7 @@ def activation_step_forward(Z, activation):
 
     return A
 
-def single_layer_forward(A_prev, W, b, activation):
+def single_layer_forward(A_prev, W, b, activation, keep_prob=1.):
     """
     Implement the forward propagation for the LINEAR->ACTIVATION layer
 
@@ -232,15 +232,26 @@ def single_layer_forward(A_prev, W, b, activation):
     layer_cache -- a python tuple containing "linear_cache" and "activation_cache" for the given layer;
              stored for computing the backward pass efficiently
     """
+
+    single_layer_cache = ()
+
     Z = linear_step_forward(A_prev, W, b)
     A = activation_step_forward(Z, activation)
 
     assert (A.shape == (W.shape[0], A_prev.shape[1])) # Z.shape
 
-    single_layer_cache = (Z, A, W, b, A_prev)
+    if keep_prob == 1.:
+        single_layer_cache = (Z, A, W, b, A_prev)
+    elif keep_prob < 1. and keep_prob > 0.:
+        D = (np.random.rand(A.shape[0],A.shape[1]) < keep_prob).astype(int) # dropout draw
+        A = np.multiply(A,D) / keep_prob # dropout and inverted dropout
+        single_layer_cache = (Z, A, W, b, A_prev, D)
+    else:
+        print("\033[91mError! Please select valid keep_prob value")
+
     return A, single_layer_cache
 
-def L_layer_model_forward(X, parameters, keep_prob=1.):
+def L_layer_model_forward(X, parameters, keep_prob=None):
     """
     Implement forward propagation for the [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID computation
 
@@ -258,8 +269,11 @@ def L_layer_model_forward(X, parameters, keep_prob=1.):
     model_cache = {}
 
     for l in range(1,L): # layer 1 to L-1
-        A, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
-
+        if keep_prob == None:
+            A, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
+        else:
+            A, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)],
+                                                         "relu", keep_prob=keep_prob[l - 1])
         model_cache["layer" + str(l)] = single_layer_cache
         A_prev = A
 
@@ -427,14 +441,21 @@ def single_layer_backward(dA, single_layer_cache, activation, lambd=0., keep_pro
     dW -- Gradient of the cost with respect to W (current layer l), same shape as W
     db -- Gradient of the cost with respect to b (current layer l), same shape as b
     """
-    Z, A, W, b, A_prev = single_layer_cache
+
+    if keep_prob == 1.:
+        Z, A, W, b, A_prev = single_layer_cache
+    elif keep_prob < 1. and keep_prob > 0.:
+        Z, A, W, b, A_prev, D = single_layer_cache
+        dA = np.multiply(dA, D) / keep_prob
+    else:
+        print("\033[91mError! Please select valid keep_prob value")
 
     dZ = activation_step_backward(dA, Z, activation)
     dA_prev, dW, db = linear_step_backward(dZ, A_prev, W, b, lambd=lambd, keep_prob= keep_prob)
 
     return dA_prev, dW, db
 
-def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=1.):
+def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=None):
     """
     Implement the backward propagation for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
 
@@ -459,8 +480,7 @@ def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=1.):
     grads["dA" + str(L)] = dAL
 
     single_layer_cache = model_cache["layer" + str(L)]
-    dA_prev, dW, db = single_layer_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid", lambd=lambd,
-                                            keep_prob=keep_prob)
+    dA_prev, dW, db = single_layer_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid", lambd=lambd)
     grads["dW" + str(L)] = dW
     grads["db" + str(L)] = db
     grads["dA" + str(L-1)] = dA_prev
@@ -468,8 +488,12 @@ def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=1.):
     # Hidden layers backpropagation
     for l in reversed(range(1,L)): # Loop from L-1 to 1
         single_layer_cache = model_cache["layer" + str(l)]
-        dA_prev, dW, db = single_layer_backward(grads["dA" + str(l)], single_layer_cache, activation="relu",
-                                                lambd=lambd, keep_prob=keep_prob)
+        if keep_prob == None:
+            dA_prev, dW, db = single_layer_backward(grads["dA" + str(l)], single_layer_cache, activation="relu",
+                                                lambd=lambd)
+        else:
+            dA_prev, dW, db = single_layer_backward(grads["dA" + str(l)], single_layer_cache, activation="relu",
+                                                lambd=lambd, keep_prob=keep_prob[l-1])
         grads["dW" + str(l)] = dW
         grads["db" + str(l)] = db
         grads["dA" + str(l - 1)] = dA_prev
@@ -544,7 +568,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False, initialization ="he", lambd=0., keep_prob=1.):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False, initialization ="he", lambd=0., keep_prob = None):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -579,12 +603,8 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         print ("\033[91mError! Please select correct initialization method")
 
     for i in range(num_iterations):
-        if keep_prob == 1. :
-            AL, model_cache = L_layer_model_forward(X,parameters)
-        elif keep_prob < 1. and keep_prob > 0.:
-            AL, model_cache = L_layer_model_forward(X, parameters, keep_prob=keep_prob)
-        else:
-            print("\033[91mError! Please select valid keep_prob value")
+
+        AL, model_cache = L_layer_model_forward(X,parameters, keep_prob=keep_prob)
 
         if lambd == 0.:
             cost = compute_cross_entropy_cost(AL, Y)
@@ -593,16 +613,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         else:
             print("\033[91mError! Please select valid lambd value")
 
-        if lambd == 0. and keep_prob == 1.:
-            grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd, keep_prob=keep_prob)
-        elif lambd == 0. and keep_prob < 1. and keep_prob > 0.:
-            grads = L_layer_model_backward(AL, Y, model_cache, keep_prob=keep_prob)
-        elif lambd > 0. and keep_prob == 1.:
-            grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd)
-        # elif lambd > 0. and keep_prob < 1. and keep_prob > 0.:
-        #     grads = L_layer_model_backward_with_L2_regularization_and_droput()
-        # else:
-        #     print("\033[91mError! Please select valid lambd and keep_prob values")
+        grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd, keep_prob=keep_prob)
 
         parameters = update_parameters(parameters, grads, learning_rate)
 
