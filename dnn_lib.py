@@ -240,36 +240,7 @@ def single_layer_forward(A_prev, W, b, activation):
     single_layer_cache = (Z, A, W, b, A_prev)
     return A, single_layer_cache
 
-def L_layer_model_forward(X, parameters):
-    """
-    Implement forward propagation for the [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID computation
-
-    Arguments:
-    X -- data, numpy array of shape (input size, number of examples)
-    parameters -- output of initialize_parameters_deep()
-
-    Returns:
-    AL -- activation value from the output (last) layer
-    caches -- list of caches containing:
-                every cache of linear_activation_forward() (there are L of them, indexed from 0 to L-1)
-    """
-    L = len(parameters) // 2
-    A_prev = X
-    model_cache = {}
-
-    for l in range(1,L): # layer 1 to L-1
-        A, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
-
-        model_cache["layer" + str(l)] = single_layer_cache
-        A_prev = A
-
-    AL, single_layer_cache = single_layer_forward(A_prev, parameters["W" + str(L)], parameters["b" + str(L)], "sigmoid")
-    model_cache["layer" + str(L)] = single_layer_cache
-
-    return AL, model_cache
-
-
-def L_layer_model_forward_with_dropout(X, parameters, lambd = 0.5):
+def L_layer_model_forward(X, parameters, keep_prob=1.):
     """
     Implement forward propagation for the [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID computation
 
@@ -610,10 +581,10 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
     for i in range(num_iterations):
         if keep_prob == 1. :
             AL, model_cache = L_layer_model_forward(X,parameters)
-        # elif keep_prob < 1. and keep_prob > 0.:
-        #     AL, model_cache = L_layer_model_forward_with_dropout(X, parameters)
-        # else:
-        #     print("\033[91mError! Please select valid keep_prob value")
+        elif keep_prob < 1. and keep_prob > 0.:
+            AL, model_cache = L_layer_model_forward(X, parameters, keep_prob=keep_prob)
+        else:
+            print("\033[91mError! Please select valid keep_prob value")
 
         if lambd == 0.:
             cost = compute_cross_entropy_cost(AL, Y)
@@ -623,9 +594,9 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             print("\033[91mError! Please select valid lambd value")
 
         if lambd == 0. and keep_prob == 1.:
-            grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd)
-        # elif lambd == 0. and keep_prob < 1. and keep_prob > 0.:
-        #     grads = L_layer_model_backward_with_dropout()
+            grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd, keep_prob=keep_prob)
+        elif lambd == 0. and keep_prob < 1. and keep_prob > 0.:
+            grads = L_layer_model_backward(AL, Y, model_cache, keep_prob=keep_prob)
         elif lambd > 0. and keep_prob == 1.:
             grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd)
         # elif lambd > 0. and keep_prob < 1. and keep_prob > 0.:
