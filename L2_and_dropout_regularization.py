@@ -7,7 +7,7 @@ plt.rcParams['image.cmap'] = 'gray'
 
 train_X, train_Y, test_X, test_Y = load_2D_dataset()
 
-parameters, costs = train_deep_fully_connected_model(train_X, train_Y, [train_X.shape[0],20,3,1], learning_rate=0.3, num_iterations=30000, print_cost=True, initialization='xavier', keep_prob=[0.86,0.86])
+parameters, costs = train_deep_fully_connected_model(train_X, train_Y, [train_X.shape[0],20,3,1], learning_rate=0.3, num_iterations=30000, print_cost=True, initialization='xavier', lambd=0.1, keep_prob=[0.8,0.9])
 plot_costs(costs, learning_rate=0.3)
 train_predictions = predict(train_X, parameters, 0.5)
 train_accuracy = calculate_accuracy(train_predictions, train_Y)
