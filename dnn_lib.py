@@ -442,7 +442,7 @@ def activation_step_backward(dA, Z, activation):
 
     return dZ
 
-def single_layer_calculations_backward(dA, single_layer_cache, activation, lambd=0., keep_prob=1.):
+def single_layer_backward(dA, single_layer_cache, activation, lambd=0., keep_prob=1.):
     """
     Implement the backward propagation for the LINEAR->ACTIVATION layer.
 
@@ -488,7 +488,8 @@ def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=1.):
     grads["dA" + str(L)] = dAL
 
     single_layer_cache = model_cache["layer" + str(L)]
-    dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid", lambd=lambd, keep_prob=keep_prob)
+    dA_prev, dW, db = single_layer_backward(grads["dA" + str(L)], single_layer_cache, activation="sigmoid", lambd=lambd,
+                                            keep_prob=keep_prob)
     grads["dW" + str(L)] = dW
     grads["db" + str(L)] = db
     grads["dA" + str(L-1)] = dA_prev
@@ -496,7 +497,8 @@ def L_layer_model_backward(AL, Y, model_cache, lambd=0., keep_prob=1.):
     # Hidden layers backpropagation
     for l in reversed(range(1,L)): # Loop from L-1 to 1
         single_layer_cache = model_cache["layer" + str(l)]
-        dA_prev, dW, db = single_layer_calculations_backward(grads["dA" + str(l)], single_layer_cache, activation="relu", lambd=lambd, keep_prob=keep_prob)
+        dA_prev, dW, db = single_layer_backward(grads["dA" + str(l)], single_layer_cache, activation="relu",
+                                                lambd=lambd, keep_prob=keep_prob)
         grads["dW" + str(l)] = dW
         grads["db" + str(l)] = db
         grads["dA" + str(l - 1)] = dA_prev
@@ -558,8 +560,8 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
         dAL = - np.divide(Y,AL) + np.divide(1-Y,1-AL)
 
-        grads["dA1"], grads["dW2"], grads["db2"] = single_layer_calculations_backward(dAL, model_cache["layer2"], "sigmoid")
-        grads["dA0"], grads["dW1"], grads["db1"] = single_layer_calculations_backward(grads["dA1"], model_cache["layer1"], "relu")
+        grads["dA1"], grads["dW2"], grads["db2"] = single_layer_backward(dAL, model_cache["layer2"], "sigmoid")
+        grads["dA0"], grads["dW1"], grads["db1"] = single_layer_backward(grads["dA1"], model_cache["layer1"], "relu")
 
 
         parameters = update_parameters(parameters, grads, learning_rate)
