@@ -357,7 +357,13 @@ def linear_step_backward(dZ, A_prev, W, b, lambd=0., keep_prob=1.0):
 
     m = dZ.shape[1] # A_prev.shape[1] would be ok as well, as m is common for Z,dZ,A,dA and is common for all layers
 
-    dW = 1./m * np.dot(dZ,A_prev.T) # dW.shape = (n_l, n_(l-1)), dZ.shape = (n_l, m), A_prev.shape = (n_(l-1), m)
+    if lambd == 0.:
+        dW = 1./m * np.dot(dZ,A_prev.T) # dW.shape = (n_l, n_(l-1)), dZ.shape = (n_l, m), A_prev.shape = (n_(l-1), m)
+    elif lambd > 0.:
+        dW = 1./m * np.dot(dZ,A_prev.T) + lambd/m * W # L2 norm part of the cost derivative added
+    else:
+        print("\033[91mError! Please select valid lambd value")
+
     db = 1./m * np.sum(dZ, axis=1, keepdims=True) # db.shape = (n_1, 1),  dZ.shape = (n_l, m)
     dA_prev = np.dot(W.T,dZ) # no division by number of training examples (m) as there is no sum over the m examples
     # dA_prev.shape = (n_(l-1), m), dW.shape = (n_l, n_(l-1)), dZ.shape = (n_l, m)
@@ -453,7 +459,7 @@ def single_layer_calculations_backward(dA, single_layer_cache, activation, lambd
     Z, A, W, b, A_prev = single_layer_cache
 
     dZ = activation_step_backward(dA, Z, activation)
-    dA_prev, dW, db = linear_step_backward(dZ, A_prev, W, b)
+    dA_prev, dW, db = linear_step_backward(dZ, A_prev, W, b, lambd=lambd, keep_prob= keep_prob)
 
     return dA_prev, dW, db
 
@@ -615,11 +621,11 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             print("\033[91mError! Please select valid lambd value")
 
         if lambd == 0. and keep_prob == 1.:
-            grads = L_layer_model_backward(AL, Y, model_cache)
+            grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd)
         # elif lambd == 0. and keep_prob < 1. and keep_prob > 0.:
         #     grads = L_layer_model_backward_with_dropout()
         elif lambd > 0. and keep_prob == 1.:
-            grads = L_layer_model_backward(AL, Y, model_cache, lambd, keep_prob)
+            grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd)
         # elif lambd > 0. and keep_prob < 1. and keep_prob > 0.:
         #     grads = L_layer_model_backward_with_L2_regularization_and_droput()
         # else:
